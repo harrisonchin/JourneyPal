@@ -1,27 +1,51 @@
 package com.mobileinvalley.journeypal
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
-
-import journeypal.shared.generated.resources.Res
-import journeypal.shared.generated.resources.compose_multiplatform
 
 @Composable
 fun App(database: JourneyDatabase? = null) {
+    val dao = database?.journeyDao()
+    val journeyItems by if (dao != null) {
+        dao.getAllItems().collectAsState(initial = emptyList())
+    } else {
+        remember { mutableStateOf(getMockJourneyItems()) }
+    }
+
+    var selectedTab by remember { mutableIntStateOf(0) }
+
     MaterialTheme {
-        TimelineScreen(database?.journeyDao())
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        label = { Text("Timeline") },
+                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Timeline") }
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        label = { Text("Map") },
+                        icon = { Icon(Icons.Default.Map, contentDescription = "Map") }
+                    )
+                }
+            }
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues)) {
+                when (selectedTab) {
+                    0 -> TimelineScreen(dao)
+                    1 -> JourneyMapView(journeyItems, modifier = Modifier.fillMaxSize())
+                }
+            }
+        }
     }
 }

@@ -6,8 +6,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +33,8 @@ fun TimelineScreen(dao: JourneyDao? = null) {
     val scope = rememberCoroutineScope()
     var showAddDialog by remember { mutableStateOf(false) }
     var newNote by remember { mutableStateOf("") }
+    var latText by remember { mutableStateOf("") }
+    var lonText by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -58,6 +62,14 @@ fun TimelineScreen(dao: JourneyDao? = null) {
     }
 
     if (showAddDialog) {
+        LaunchedEffect(Unit) {
+            val location = getCurrentLocation()
+            if (location != null) {
+                latText = location.latitude.toString()
+                lonText = location.longitude.toString()
+            }
+        }
+
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
             title = { Text("New Journey Entry") },
@@ -70,6 +82,34 @@ fun TimelineScreen(dao: JourneyDao? = null) {
                         placeholder = { Text("Enter your notes here...") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextField(
+                            value = latText,
+                            onValueChange = { latText = it },
+                            label = { Text("Lat") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextField(
+                            value = lonText,
+                            onValueChange = { lonText = it },
+                            label = { Text("Lon") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = {
+                            scope.launch {
+                                val location = getCurrentLocation()
+                                if (location != null) {
+                                    latText = location.latitude.toString()
+                                    lonText = location.longitude.toString()
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Default.MyLocation, contentDescription = "Detect Location")
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -77,12 +117,19 @@ fun TimelineScreen(dao: JourneyDao? = null) {
                     onClick = {
                         if (newNote.isNotBlank()) {
                             val currentNow = now()
+                            
+                            val parsedLat = latText.toDoubleOrNull() ?: 0.0
+                            val parsedLon = lonText.toDoubleOrNull() ?: 0.0
+                            
+                            val finalLat = if (parsedLat == 0.0) 37.5483 else parsedLat
+                            val finalLon = if (parsedLon == 0.0) -121.9886 else parsedLon
+
                             val newItem = JourneyItem(
                                 id = "${currentNow.toEpochMilliseconds()}_${kotlin.random.Random.nextInt(1000)}",
                                 photoPath = "",
                                 timestamp = currentNow,
-                                latitude = 0.0,
-                                longitude = 0.0,
+                                latitude = finalLat,
+                                longitude = finalLon,
                                 notes = newNote
                             )
                             
@@ -94,6 +141,8 @@ fun TimelineScreen(dao: JourneyDao? = null) {
                             }
 
                             newNote = ""
+                            latText = ""
+                            lonText = ""
                             showAddDialog = false
                         }
                     }
@@ -102,7 +151,12 @@ fun TimelineScreen(dao: JourneyDao? = null) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
+                TextButton(onClick = { 
+                    newNote = ""
+                    latText = ""
+                    lonText = ""
+                    showAddDialog = false 
+                }) {
                     Text("Cancel")
                 }
             }

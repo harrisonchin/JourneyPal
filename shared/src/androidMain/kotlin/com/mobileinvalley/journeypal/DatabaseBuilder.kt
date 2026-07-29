@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-private lateinit var appContext: Context
+internal lateinit var appContext: Context
 
 fun initDatabase(context: Context) {
     appContext = context.applicationContext
