@@ -7,7 +7,7 @@ import androidx.room.ConstructedBy
 import androidx.room.RoomDatabaseConstructor
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 
-@Database(entities = [JourneyItem::class], version = 1)
+@Database(entities = [JourneyItem::class], version = 4)
 @TypeConverters(JourneyConverters::class)
 @ConstructedBy(JourneyDatabaseConstructor::class)
 abstract class JourneyDatabase : RoomDatabase() {
@@ -27,6 +27,7 @@ fun getDatabase(
 ): JourneyDatabase {
     return builder
         .setDriver(BundledSQLiteDriver())
+        .fallbackToDestructiveMigration(true)
         .build()
 }
 

@@ -13,4 +13,15 @@ class JourneyConverters {
     fun dateToTimestamp(date: Instant?): Long? {
         return date?.toEpochMilliseconds()
     }
+
+    @TypeConverter
+    fun fromStringList(value: String?): List<String> {
+        if (value.isNullOrEmpty()) return emptyList()
+        return value.split(",")
+    }
+
+    @TypeConverter
+    fun toStringList(list: List<String>?): String {
+        return list?.joinToString(",") ?: ""
+    }
 }

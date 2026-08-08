@@ -1,5 +1,6 @@
 package com.mobileinvalley.journeypal
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.datetime.Instant
@@ -8,7 +9,8 @@ import kotlinx.datetime.Instant
 data class JourneyItem(
     @PrimaryKey
     val id: String,
-    val photoPath: String,
+    @ColumnInfo(name = "photo_uris")
+    val photoUris: List<String> = emptyList(),
     val timestamp: Instant,
     val latitude: Double,
     val longitude: Double,

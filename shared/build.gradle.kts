@@ -47,6 +47,9 @@ kotlin {
             implementation(libs.osmdroid.android)
             implementation(libs.google.play.services.location)
             implementation(libs.kotlinx.coroutines.play.services)
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.coil.compose)
+            implementation(libs.coil3.android)
         }
         commonMain.dependencies {
             implementation(libs.kotlinx.datetime)
@@ -61,6 +64,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(compose.materialIconsExtended)
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

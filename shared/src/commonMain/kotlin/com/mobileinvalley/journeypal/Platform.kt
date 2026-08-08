@@ -9,3 +9,5 @@ interface Platform {
 expect fun getPlatform(): Platform
 
 expect fun now(): Instant
+
+expect fun resolveUri(uri: String?): Any?
