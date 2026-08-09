@@ -13,4 +13,7 @@ interface JourneyDao {
 
     @Query("SELECT * FROM journey_items ORDER BY timestamp DESC")
     fun getAllItems(): Flow<List<JourneyItem>>
+
+    @Query("SELECT * FROM journey_items WHERE id = :id")
+    fun getItemById(id: String): Flow<JourneyItem?>
 }

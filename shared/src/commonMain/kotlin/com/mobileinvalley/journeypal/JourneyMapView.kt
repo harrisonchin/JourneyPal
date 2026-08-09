@@ -6,5 +6,6 @@ import androidx.compose.ui.Modifier
 @Composable
 expect fun JourneyMapView(
     items: List<JourneyItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onItemClick: (JourneyItem) -> Unit = {}
 )

@@ -25,7 +25,10 @@ import kotlin.time.Duration.Companion.days
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimelineScreen(dao: JourneyDao? = null) {
+fun TimelineScreen(
+    dao: JourneyDao? = null,
+    onItemClick: (JourneyItem) -> Unit = {}
+) {
     val journeyItems by if (dao != null) {
         dao.getAllItems().collectAsState(initial = emptyList())
     } else {
@@ -63,7 +66,7 @@ fun TimelineScreen(dao: JourneyDao? = null) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(journeyItems, key = { it.id }) { item ->
-                JourneyItemRow(item)
+                JourneyItemRow(item, onClick = { onItemClick(item) })
             }
         }
     }
@@ -201,9 +204,13 @@ fun TimelineScreen(dao: JourneyDao? = null) {
 }
 
 @Composable
-fun JourneyItemRow(item: JourneyItem) {
+fun JourneyItemRow(
+    item: JourneyItem,
+    onClick: () -> Unit = {}
+) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
