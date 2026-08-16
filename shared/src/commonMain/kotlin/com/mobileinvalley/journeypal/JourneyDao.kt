@@ -4,12 +4,16 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface JourneyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItem(item: JourneyItem)
+
+    @Update
+    suspend fun updateItem(item: JourneyItem)
 
     @Query("SELECT * FROM journey_items ORDER BY timestamp DESC")
     fun getAllItems(): Flow<List<JourneyItem>>

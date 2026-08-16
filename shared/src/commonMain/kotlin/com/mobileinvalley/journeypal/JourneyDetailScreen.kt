@@ -7,16 +7,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,14 +26,18 @@ fun JourneyDetailScreen(
     onBack: () -> Unit,
     onShowOnMap: (JourneyItem) -> Unit
 ) {
-    val item by if (dao != null) {
+    val scope = rememberCoroutineScope()
+    val itemState = if (dao != null) {
         dao.getItemById(itemId).collectAsState(initial = null)
     } else {
         // Mock fallback if dao is null (e.g. preview)
-        androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf(getMockJourneyItems().find { it.id == itemId })
+        remember {
+            mutableStateOf(getMockJourneyItems().find { it.id == itemId })
         }
     }
+    val journeyItem = itemState.value
+
+    var noteText by remember(journeyItem) { mutableStateOf(journeyItem?.notes ?: "") }
 
     Scaffold(
         topBar = {
@@ -43,11 +47,23 @@ fun JourneyDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    if (journeyItem != null && noteText != journeyItem.notes) {
+                        IconButton(onClick = {
+                            scope.launch {
+                                dao?.updateItem(journeyItem.copy(notes = noteText))
+                                onBack()
+                            }
+                        }) {
+                            Icon(Icons.Default.Save, contentDescription = "Save Changes")
+                        }
+                    }
                 }
             )
         }
     ) { paddingValues ->
-        item?.let { journeyItem ->
+        journeyItem?.let { item ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -55,9 +71,9 @@ fun JourneyDetailScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Hero Image
-                if (journeyItem.photoUris.isNotEmpty()) {
+                if (item.photoUris.isNotEmpty()) {
                     AsyncImage(
-                        model = resolveUri(journeyItem.photoUris.first()),
+                        model = resolveUri(item.photoUris.first()),
                         contentDescription = "Hero Image",
                         modifier = Modifier
                             .fillMaxWidth()
@@ -78,16 +94,18 @@ fun JourneyDetailScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Title / Notes
-                    Text(
-                        text = journeyItem.notes,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                    // Editable Notes
+                    OutlinedTextField(
+                        value = noteText,
+                        onValueChange = { noteText = it },
+                        label = { Text("Notes / Description") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3
                     )
 
                     // Timestamp
                     Text(
-                        text = "Recorded on ${journeyItem.timestamp}",
+                        text = "Recorded on ${item.timestamp}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )
@@ -102,22 +120,41 @@ fun JourneyDetailScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Latitude: ${journeyItem.latitude}",
+                            text = "Latitude: ${item.latitude}",
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "Longitude: ${journeyItem.longitude}",
+                            text = "Longitude: ${item.longitude}",
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
 
                     Button(
-                        onClick = { onShowOnMap(journeyItem) },
+                        onClick = { onShowOnMap(item) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.Map, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text("Show on Map")
+                    }
+                    
+                    if (noteText != item.notes) {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    dao?.updateItem(item.copy(notes = noteText))
+                                    onBack()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Save Changes")
+                        }
                     }
                 }
             }
