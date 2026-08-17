@@ -1,6 +1,7 @@
 package com.mobileinvalley.journeypal
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -14,6 +15,9 @@ interface JourneyDao {
 
     @Update
     suspend fun updateItem(item: JourneyItem)
+
+    @Delete
+    suspend fun deleteItem(item: JourneyItem)
 
     @Query("SELECT * FROM journey_items ORDER BY timestamp DESC")
     fun getAllItems(): Flow<List<JourneyItem>>

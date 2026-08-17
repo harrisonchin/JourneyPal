@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -41,6 +42,7 @@ fun JourneyDetailScreen(
     var selectedLat by remember(journeyItem) { mutableDoubleStateOf(journeyItem?.latitude ?: 0.0) }
     var selectedLon by remember(journeyItem) { mutableDoubleStateOf(journeyItem?.longitude ?: 0.0) }
     var showLocationPicker by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     val hasChanges = journeyItem != null && (noteText != journeyItem.notes || selectedLat != journeyItem.latitude || selectedLon != journeyItem.longitude)
 
@@ -54,6 +56,11 @@ fun JourneyDetailScreen(
                     }
                 },
                 actions = {
+                    if (journeyItem != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Item")
+                        }
+                    }
                     if (journeyItem != null && hasChanges) {
                         IconButton(onClick = {
                             scope.launch {
@@ -222,6 +229,33 @@ fun JourneyDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLocationPicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteDialog && journeyItem != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Entry") },
+            text = { Text("Are you sure you want to delete this journey item? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            dao?.deleteItem(journeyItem)
+                            showDeleteDialog = false
+                            onBack()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancel")
                 }
             }
