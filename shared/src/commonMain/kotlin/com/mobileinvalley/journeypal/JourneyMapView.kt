@@ -9,3 +9,11 @@ expect fun JourneyMapView(
     modifier: Modifier = Modifier,
     onItemClick: (JourneyItem) -> Unit = {}
 )
+
+@Composable
+expect fun LocationPickerMapView(
+    initialLatitude: Double,
+    initialLongitude: Double,
+    modifier: Modifier = Modifier,
+    onLocationSelected: (Double, Double) -> Unit
+)

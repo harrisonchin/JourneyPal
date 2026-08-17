@@ -120,3 +120,58 @@ actual fun JourneyMapView(
         modifier = modifier
     )
 }
+
+@Composable
+actual fun LocationPickerMapView(
+    initialLatitude: Double,
+    initialLongitude: Double,
+    modifier: Modifier,
+    onLocationSelected: (Double, Double) -> Unit
+) {
+    val context = LocalContext.current
+    
+    val mapView = remember {
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+        }
+    }
+
+    val marker = remember {
+        Marker(mapView).apply {
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        }
+    }
+
+    DisposableEffect(initialLatitude, initialLongitude) {
+        mapView.overlays.clear()
+        
+        marker.position = GeoPoint(initialLatitude, initialLongitude)
+        mapView.overlays.add(marker)
+        
+        val eventsReceiver = object : org.osmdroid.events.MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
+                marker.position = p
+                onLocationSelected(p.latitude, p.longitude)
+                mapView.invalidate()
+                return true
+            }
+
+            override fun longPressHelper(p: GeoPoint): Boolean = false
+        }
+        
+        mapView.overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(eventsReceiver))
+        
+        mapView.controller.setZoom(15.0)
+        mapView.controller.setCenter(GeoPoint(initialLatitude, initialLongitude))
+
+        onDispose {
+            mapView.onDetach()
+        }
+    }
+
+    AndroidView(
+        factory = { mapView },
+        modifier = modifier
+    )
+}

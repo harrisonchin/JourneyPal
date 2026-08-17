@@ -1,14 +1,20 @@
 package com.mobileinvalley.journeypal
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.interop.UIKitView
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCAction
+import kotlinx.cinterop.useContents
 import platform.MapKit.*
+import platform.CoreLocation.CLLocationCoordinate2D
 import platform.CoreLocation.CLLocationCoordinate2DMake
 import platform.UIKit.*
 import platform.Foundation.*
+import platform.objc.sel_registerName
 import platform.darwin.NSObject
 import platform.CoreGraphics.CGRectMake
 
@@ -106,4 +112,61 @@ class JourneyAnnotation(val item: JourneyItem) : MKPointAnnotation() {
         setCoordinate(CLLocationCoordinate2DMake(item.latitude, item.longitude))
         setTitle(item.notes)
     }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+@Composable
+actual fun LocationPickerMapView(
+    initialLatitude: Double,
+    initialLongitude: Double,
+    modifier: Modifier,
+    onLocationSelected: (Double, Double) -> Unit
+) {
+    val annotation = remember { MKPointAnnotation() }
+    
+    val mapView = remember {
+        MKMapView().apply {
+            val center = CLLocationCoordinate2DMake(initialLatitude, initialLongitude)
+            val region = MKCoordinateRegionMakeWithDistance(center, 1000.0, 1000.0)
+            setRegion(region, animated = false)
+            
+            annotation.setCoordinate(center)
+            addAnnotation(annotation)
+        }
+    }
+
+    val gestureRecognizer = remember {
+        val recognizer = object : NSObject() {
+            @Suppress("UNUSED_PARAMETER")
+            @OptIn(BetaInteropApi::class)
+            @ObjCAction
+            fun handleTap(sender: UITapGestureRecognizer) {
+                if (sender.state == UIGestureRecognizerStateEnded) {
+                    val location = sender.locationInView(mapView)
+                    val coordinate = mapView.convertPoint(location, toCoordinateFromView = mapView)
+                    
+                    coordinate.useContents {
+                        val lat = this.latitude
+                        val lon = this.longitude
+                        annotation.setCoordinate(CLLocationCoordinate2DMake(lat, lon))
+                        onLocationSelected(lat, lon)
+                    }
+                }
+            }
+        }
+        
+        UITapGestureRecognizer(target = recognizer, action = sel_registerName("handleTap:"))
+    }
+
+    DisposableEffect(mapView) {
+        mapView.addGestureRecognizer(gestureRecognizer)
+        onDispose {
+            mapView.removeGestureRecognizer(gestureRecognizer)
+        }
+    }
+
+    UIKitView(
+        factory = { mapView },
+        modifier = modifier
+    )
 }

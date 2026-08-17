@@ -38,6 +38,11 @@ fun JourneyDetailScreen(
     val journeyItem = itemState.value
 
     var noteText by remember(journeyItem) { mutableStateOf(journeyItem?.notes ?: "") }
+    var selectedLat by remember(journeyItem) { mutableDoubleStateOf(journeyItem?.latitude ?: 0.0) }
+    var selectedLon by remember(journeyItem) { mutableDoubleStateOf(journeyItem?.longitude ?: 0.0) }
+    var showLocationPicker by remember { mutableStateOf(false) }
+
+    val hasChanges = journeyItem != null && (noteText != journeyItem.notes || selectedLat != journeyItem.latitude || selectedLon != journeyItem.longitude)
 
     Scaffold(
         topBar = {
@@ -49,10 +54,14 @@ fun JourneyDetailScreen(
                     }
                 },
                 actions = {
-                    if (journeyItem != null && noteText != journeyItem.notes) {
+                    if (journeyItem != null && hasChanges) {
                         IconButton(onClick = {
                             scope.launch {
-                                dao?.updateItem(journeyItem.copy(notes = noteText))
+                                dao?.updateItem(journeyItem.copy(
+                                    notes = noteText,
+                                    latitude = selectedLat,
+                                    longitude = selectedLon
+                                ))
                                 onBack()
                             }
                         }) {
@@ -114,17 +123,28 @@ fun JourneyDetailScreen(
 
                     // Location Details
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Location",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            TextButton(onClick = { showLocationPicker = true }) {
+                                Icon(Icons.Default.Map, contentDescription = null)
+                                Spacer(Modifier.width(4.dp))
+                                Text("Pick on Map")
+                            }
+                        }
                         Text(
-                            text = "Location",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Latitude: ${item.latitude}",
+                            text = "Latitude: $selectedLat",
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "Longitude: ${item.longitude}",
+                            text = "Longitude: $selectedLon",
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -138,11 +158,15 @@ fun JourneyDetailScreen(
                         Text("Show on Map")
                     }
                     
-                    if (noteText != item.notes) {
+                    if (hasChanges) {
                         Button(
                             onClick = {
                                 scope.launch {
-                                    dao?.updateItem(item.copy(notes = noteText))
+                                    dao?.updateItem(item.copy(
+                                        notes = noteText,
+                                        latitude = selectedLat,
+                                        longitude = selectedLon
+                                    ))
                                     onBack()
                                 }
                             },
@@ -163,5 +187,44 @@ fun JourneyDetailScreen(
                 CircularProgressIndicator()
             }
         }
+    }
+
+    if (showLocationPicker && journeyItem != null) {
+        var tempLat by remember { mutableDoubleStateOf(selectedLat) }
+        var tempLon by remember { mutableDoubleStateOf(selectedLon) }
+
+        AlertDialog(
+            onDismissRequest = { showLocationPicker = false },
+            title = { Text("Select Location") },
+            text = {
+                Column(modifier = Modifier.height(400.dp)) {
+                    Text("Tap on the map to select a new location.", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    LocationPickerMapView(
+                        initialLatitude = selectedLat,
+                        initialLongitude = selectedLon,
+                        modifier = Modifier.fillMaxSize().weight(1f),
+                        onLocationSelected = { lat, lon ->
+                            tempLat = lat
+                            tempLon = lon
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedLat = tempLat
+                    selectedLon = tempLon
+                    showLocationPicker = false
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocationPicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
