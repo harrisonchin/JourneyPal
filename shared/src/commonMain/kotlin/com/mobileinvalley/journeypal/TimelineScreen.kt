@@ -7,8 +7,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,10 +31,22 @@ fun TimelineScreen(
     dao: JourneyDao? = null,
     onItemClick: (JourneyItem) -> Unit = {}
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    
     val journeyItems by if (dao != null) {
-        dao.getAllItems().collectAsState(initial = emptyList())
+        remember(searchQuery) {
+            if (searchQuery.isEmpty()) {
+                dao.getAllItems()
+            } else {
+                dao.searchItems(searchQuery)
+            }
+        }.collectAsState(initial = emptyList())
     } else {
-        remember { mutableStateOf(getMockJourneyItems()) }
+        remember(searchQuery) {
+            mutableStateOf(
+                getMockJourneyItems().filter { it.notes.contains(searchQuery, ignoreCase = true) }
+            )
+        }
     }
     
     val scope = rememberCoroutineScope()
@@ -48,9 +62,31 @@ fun TimelineScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("JourneyPal Timeline") }
-            )
+            Surface(shadowElevation = 4.dp) {
+                Column {
+                    CenterAlignedTopAppBar(
+                        title = { Text("JourneyPal Timeline") }
+                    )
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        placeholder = { Text("Search your journey...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                }
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
@@ -58,15 +94,30 @@ fun TimelineScreen(
             }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(journeyItems, key = { it.id }) { item ->
-                JourneyItemRow(item, onClick = { onItemClick(item) })
+        if (journeyItems.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (searchQuery.isEmpty()) "No journey entries yet." else "No journey entries match your search.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(journeyItems, key = { it.id }) { item ->
+                    JourneyItemRow(item, onClick = { onItemClick(item) })
+                }
             }
         }
     }
