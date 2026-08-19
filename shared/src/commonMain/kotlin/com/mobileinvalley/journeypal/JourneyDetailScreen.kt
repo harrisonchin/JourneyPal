@@ -1,6 +1,7 @@
 package com.mobileinvalley.journeypal
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -43,6 +44,7 @@ fun JourneyDetailScreen(
     var selectedLon by remember(journeyItem) { mutableDoubleStateOf(journeyItem?.longitude ?: 0.0) }
     var showLocationPicker by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var fullscreenPhotoUri by remember { mutableStateOf<String?>(null) }
 
     val hasChanges = journeyItem != null && (noteText != journeyItem.notes || selectedLat != journeyItem.latitude || selectedLon != journeyItem.longitude)
 
@@ -88,13 +90,15 @@ fun JourneyDetailScreen(
             ) {
                 // Hero Image
                 if (item.photoUris.isNotEmpty()) {
+                    val heroUri = item.photoUris.first()
                     AsyncImage(
-                        model = resolveUri(item.photoUris.first()),
+                        model = resolveUri(heroUri),
                         contentDescription = "Hero Image",
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(250.dp)
-                            .background(Color.LightGray),
+                            .background(Color.LightGray)
+                            .clickable { fullscreenPhotoUri = heroUri },
                         contentScale = ContentScale.Crop
                     )
                 } else {
@@ -259,6 +263,13 @@ fun JourneyDetailScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    if (fullscreenPhotoUri != null) {
+        FullscreenImageViewer(
+            photoUri = fullscreenPhotoUri!!,
+            onDismiss = { fullscreenPhotoUri = null }
         )
     }
 }

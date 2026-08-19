@@ -1,6 +1,7 @@
 package com.mobileinvalley.journeypal
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,6 +34,7 @@ fun TimelineScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var selectedStartDate by remember { mutableStateOf<Long?>(null) }
     var selectedEndDate by remember { mutableStateOf<Long?>(null) }
+    var fullscreenPhotoUri by remember { mutableStateOf<String?>(null) }
     
     val journeyItems by if (dao != null) {
         remember(searchQuery, selectedStartDate, selectedEndDate) {
@@ -183,7 +185,11 @@ fun TimelineScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(journeyItems, key = { it.id }) { item ->
-                    JourneyItemRow(item, onClick = { onItemClick(item) })
+                    JourneyItemRow(
+                        item = item,
+                        onClick = { onItemClick(item) },
+                        onPhotoClick = { uri -> fullscreenPhotoUri = uri }
+                    )
                 }
             }
         }
@@ -351,12 +357,20 @@ fun TimelineScreen(
             )
         }
     }
+
+    if (fullscreenPhotoUri != null) {
+        FullscreenImageViewer(
+            photoUri = fullscreenPhotoUri!!,
+            onDismiss = { fullscreenPhotoUri = null }
+        )
+    }
 }
 
 @Composable
 fun JourneyItemRow(
     item: JourneyItem,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onPhotoClick: (String) -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -368,12 +382,14 @@ fun JourneyItemRow(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (item.photoUris.isNotEmpty()) {
+                    val firstUri = item.photoUris.first()
                     AsyncImage(
-                        model = resolveUri(item.photoUris.first()),
+                        model = resolveUri(firstUri),
                         contentDescription = "Journey Photo",
                         modifier = Modifier
                             .size(80.dp)
-                            .background(Color.LightGray),
+                            .background(Color.LightGray)
+                            .clickable { onPhotoClick(firstUri) },
                         contentScale = ContentScale.Crop
                     )
                 } else {
@@ -412,7 +428,9 @@ fun JourneyItemRow(
                         AsyncImage(
                             model = resolveUri(uri),
                             contentDescription = "Journey Photo",
-                            modifier = Modifier.size(60.dp),
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clickable { onPhotoClick(uri) },
                             contentScale = ContentScale.Crop
                         )
                     }
