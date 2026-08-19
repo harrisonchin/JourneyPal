@@ -1,5 +1,9 @@
 package com.mobileinvalley.journeypal
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -38,63 +42,74 @@ fun App(database: JourneyDatabase? = null) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: ""
 
-    MaterialTheme {
-        Scaffold(
-            bottomBar = {
-                // Show bottom bar only on main screens
-                if (currentRoute.contains("TimelineRoute") || currentRoute.contains("MapRoute")) {
-                    NavigationBar {
-                        NavigationBarItem(
-                            selected = currentRoute.contains("TimelineRoute"),
-                            onClick = { 
-                                navController.navigate(TimelineRoute) {
-                                    popUpTo(TimelineRoute) { inclusive = true }
-                                }
-                            },
-                            label = { Text("Timeline") },
-                            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Timeline") }
-                        )
-                        NavigationBarItem(
-                            selected = currentRoute.contains("MapRoute"),
-                            onClick = { 
-                                navController.navigate(MapRoute)
-                            },
-                            label = { Text("Map") },
-                            icon = { Icon(Icons.Default.Map, contentDescription = "Map") }
-                        )
+    val themeMode = remember { mutableStateOf(ThemeMode.System) }
+
+    CompositionLocalProvider(LocalThemeMode provides themeMode) {
+        JourneyPalTheme(themeMode = themeMode.value) {
+            Scaffold(
+                bottomBar = {
+                    // Show bottom bar only on main screens
+                    if (currentRoute.contains("TimelineRoute") || currentRoute.contains("MapRoute")) {
+                        NavigationBar {
+                            NavigationBarItem(
+                                selected = currentRoute.contains("TimelineRoute"),
+                                onClick = { 
+                                    navController.navigate(TimelineRoute) {
+                                        popUpTo(TimelineRoute) { inclusive = true }
+                                    }
+                                },
+                                label = { Text("Timeline") },
+                                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Timeline") }
+                            )
+                            NavigationBarItem(
+                                selected = currentRoute.contains("MapRoute"),
+                                onClick = { 
+                                    navController.navigate(MapRoute)
+                                },
+                                label = { Text("Map") },
+                                icon = { Icon(Icons.Default.Map, contentDescription = "Map") }
+                            )
+                        }
                     }
                 }
-            }
-        ) { paddingValues ->
-            Box(modifier = Modifier.padding(paddingValues)) {
-                NavHost(navController = navController, startDestination = TimelineRoute) {
-                    composable<TimelineRoute> {
-                        TimelineScreen(
-                            dao = dao,
-                            onItemClick = { item ->
-                                navController.navigate(DetailRoute(item.id))
-                            }
-                        )
-                    }
-                    composable<MapRoute> {
-                        JourneyMapView(
-                            items = journeyItems,
-                            modifier = Modifier.fillMaxSize(),
-                            onItemClick = { item ->
-                                navController.navigate(DetailRoute(item.id))
-                            }
-                        )
-                    }
-                    composable<DetailRoute> { backStackEntry ->
-                        val detail: DetailRoute = backStackEntry.toRoute()
-                        JourneyDetailScreen(
-                            itemId = detail.itemId,
-                            dao = dao,
-                            onBack = { navController.popBackStack() },
-                            onShowOnMap = {
-                                navController.navigate(MapRoute)
-                            }
-                        )
+            ) { paddingValues ->
+                Box(modifier = Modifier.padding(paddingValues)) {
+                    NavHost(
+                        navController = navController, 
+                        startDestination = TimelineRoute,
+                        enterTransition = { fadeIn(animationSpec = tween(300)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300)) },
+                        exitTransition = { fadeOut(animationSpec = tween(300)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300)) },
+                        popEnterTransition = { fadeIn(animationSpec = tween(300)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300)) },
+                        popExitTransition = { fadeOut(animationSpec = tween(300)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300)) }
+                    ) {
+                        composable<TimelineRoute> {
+                            TimelineScreen(
+                                dao = dao,
+                                onItemClick = { item ->
+                                    navController.navigate(DetailRoute(item.id))
+                                }
+                            )
+                        }
+                        composable<MapRoute> {
+                            JourneyMapView(
+                                items = journeyItems,
+                                modifier = Modifier.fillMaxSize(),
+                                onItemClick = { item ->
+                                    navController.navigate(DetailRoute(item.id))
+                                }
+                            )
+                        }
+                        composable<DetailRoute> { backStackEntry ->
+                            val detail: DetailRoute = backStackEntry.toRoute()
+                            JourneyDetailScreen(
+                                itemId = detail.itemId,
+                                dao = dao,
+                                onBack = { navController.popBackStack() },
+                                onShowOnMap = {
+                                    navController.navigate(MapRoute)
+                                }
+                            )
+                        }
                     }
                 }
             }

@@ -36,6 +36,7 @@ fun TimelineScreen(
     dao: JourneyDao? = null,
     onItemClick: (JourneyItem) -> Unit = {}
 ) {
+    val themeModeState = LocalThemeMode.current
     var searchQuery by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
     var selectedStartDate by remember { mutableStateOf<Long?>(null) }
@@ -91,6 +92,20 @@ fun TimelineScreen(
                     CenterAlignedTopAppBar(
                         title = { Text("JourneyPal Timeline") },
                         actions = {
+                            IconButton(onClick = {
+                                themeModeState.value = when (themeModeState.value) {
+                                    ThemeMode.Light -> ThemeMode.Dark
+                                    ThemeMode.Dark -> ThemeMode.System
+                                    ThemeMode.System -> ThemeMode.Light
+                                }
+                            }) {
+                                val icon = when (themeModeState.value) {
+                                    ThemeMode.Light -> Icons.Default.LightMode
+                                    ThemeMode.Dark -> Icons.Default.DarkMode
+                                    ThemeMode.System -> Icons.Default.SettingsBrightness
+                                }
+                                Icon(icon, contentDescription = "Toggle Theme")
+                            }
                             var showMenu by remember { mutableStateOf(false) }
                             Box {
                                 IconButton(onClick = { showMenu = true }) {
@@ -429,7 +444,9 @@ fun JourneyItemRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
+        onClick = onClick,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.large
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

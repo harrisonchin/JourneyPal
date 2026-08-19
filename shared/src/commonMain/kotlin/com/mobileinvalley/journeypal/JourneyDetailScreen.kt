@@ -7,9 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -28,6 +26,7 @@ fun JourneyDetailScreen(
     onBack: () -> Unit,
     onShowOnMap: (JourneyItem) -> Unit
 ) {
+    val themeModeState = LocalThemeMode.current
     val scope = rememberCoroutineScope()
     val itemState = if (dao != null) {
         dao.getItemById(itemId).collectAsState(initial = null)
@@ -58,6 +57,20 @@ fun JourneyDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        themeModeState.value = when (themeModeState.value) {
+                            ThemeMode.Light -> ThemeMode.Dark
+                            ThemeMode.Dark -> ThemeMode.System
+                            ThemeMode.System -> ThemeMode.Light
+                        }
+                    }) {
+                        val icon = when (themeModeState.value) {
+                            ThemeMode.Light -> Icons.Default.LightMode
+                            ThemeMode.Dark -> Icons.Default.DarkMode
+                            ThemeMode.System -> Icons.Default.SettingsBrightness
+                        }
+                        Icon(icon, contentDescription = "Toggle Theme")
+                    }
                     if (journeyItem != null) {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete Item")
