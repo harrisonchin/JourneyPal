@@ -38,14 +38,7 @@ fun TimelineScreen(
         remember(searchQuery, selectedStartDate, selectedEndDate) {
             val start = selectedStartDate?.let { Instant.fromEpochMilliseconds(it) }
             val end = selectedEndDate?.let { Instant.fromEpochMilliseconds(it + 86399999) } // End of day
-
-            if (start != null && end != null) {
-                dao.searchAndFilter(searchQuery, start, end)
-            } else if (searchQuery.isNotEmpty()) {
-                dao.searchItems(searchQuery)
-            } else {
-                dao.getAllItems()
-            }
+            dao.searchAndFilterItems(searchQuery, start, end)
         }.collectAsState(initial = emptyList())
     } else {
         remember(searchQuery, selectedStartDate, selectedEndDate) {
@@ -57,6 +50,10 @@ fun TimelineScreen(
                     val matchesSearch = item.notes.contains(searchQuery, ignoreCase = true)
                     val matchesDate = if (start != null && end != null) {
                         item.timestamp in start..end
+                    } else if (start != null) {
+                        item.timestamp >= start
+                    } else if (end != null) {
+                        item.timestamp <= end
                     } else true
                     matchesSearch && matchesDate
                 }
@@ -108,14 +105,15 @@ fun TimelineScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val dateFilterActive = selectedStartDate != null && selectedEndDate != null
+                        // Date Range Chip
+                        val dateFilterActive = selectedStartDate != null || selectedEndDate != null
                         FilterChip(
                             selected = dateFilterActive,
                             onClick = { showDatePicker = true },
                             label = {
                                 if (dateFilterActive) {
-                                    val startStr = Instant.fromEpochMilliseconds(selectedStartDate!!).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
-                                    val endStr = Instant.fromEpochMilliseconds(selectedEndDate!!).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+                                    val startStr = selectedStartDate?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString() } ?: "..."
+                                    val endStr = selectedEndDate?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString() } ?: "..."
                                     Text("$startStr - $endStr")
                                 } else {
                                     Text("Filter by Date")
@@ -136,6 +134,23 @@ fun TimelineScreen(
                                 }
                             } else null
                         )
+
+                        // Search Query Chip (if not empty)
+                        if (searchQuery.isNotEmpty()) {
+                            FilterChip(
+                                selected = true,
+                                onClick = { /* Search bar already handles editing */ },
+                                label = { Text("Search: $searchQuery") },
+                                trailingIcon = {
+                                    IconButton(
+                                        onClick = { searchQuery = "" },
+                                        modifier = Modifier.size(18.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear search")
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
