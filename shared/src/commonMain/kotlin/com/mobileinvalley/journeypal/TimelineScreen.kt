@@ -6,11 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +19,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.days
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,19 +30,36 @@ fun TimelineScreen(
     onItemClick: (JourneyItem) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var selectedStartDate by remember { mutableStateOf<Long?>(null) }
+    var selectedEndDate by remember { mutableStateOf<Long?>(null) }
     
     val journeyItems by if (dao != null) {
-        remember(searchQuery) {
-            if (searchQuery.isEmpty()) {
-                dao.getAllItems()
-            } else {
+        remember(searchQuery, selectedStartDate, selectedEndDate) {
+            val start = selectedStartDate?.let { Instant.fromEpochMilliseconds(it) }
+            val end = selectedEndDate?.let { Instant.fromEpochMilliseconds(it + 86399999) } // End of day
+
+            if (start != null && end != null) {
+                dao.searchAndFilter(searchQuery, start, end)
+            } else if (searchQuery.isNotEmpty()) {
                 dao.searchItems(searchQuery)
+            } else {
+                dao.getAllItems()
             }
         }.collectAsState(initial = emptyList())
     } else {
-        remember(searchQuery) {
+        remember(searchQuery, selectedStartDate, selectedEndDate) {
+            val start = selectedStartDate?.let { Instant.fromEpochMilliseconds(it) }
+            val end = selectedEndDate?.let { Instant.fromEpochMilliseconds(it + 86399999) }
+            
             mutableStateOf(
-                getMockJourneyItems().filter { it.notes.contains(searchQuery, ignoreCase = true) }
+                getMockJourneyItems().filter { item ->
+                    val matchesSearch = item.notes.contains(searchQuery, ignoreCase = true)
+                    val matchesDate = if (start != null && end != null) {
+                        item.timestamp in start..end
+                    } else true
+                    matchesSearch && matchesDate
+                }
             )
         }
     }
@@ -85,6 +100,43 @@ fun TimelineScreen(
                         singleLine = true,
                         shape = MaterialTheme.shapes.medium
                     )
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val dateFilterActive = selectedStartDate != null && selectedEndDate != null
+                        FilterChip(
+                            selected = dateFilterActive,
+                            onClick = { showDatePicker = true },
+                            label = {
+                                if (dateFilterActive) {
+                                    val startStr = Instant.fromEpochMilliseconds(selectedStartDate!!).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+                                    val endStr = Instant.fromEpochMilliseconds(selectedEndDate!!).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+                                    Text("$startStr - $endStr")
+                                } else {
+                                    Text("Filter by Date")
+                                }
+                            },
+                            leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
+                            trailingIcon = if (dateFilterActive) {
+                                {
+                                    IconButton(
+                                        onClick = {
+                                            selectedStartDate = null
+                                            selectedEndDate = null
+                                        },
+                                        modifier = Modifier.size(18.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear date filter")
+                                    }
+                                }
+                            } else null
+                        )
+                    }
                 }
             }
         },
@@ -251,6 +303,38 @@ fun TimelineScreen(
                 }
             }
         )
+    }
+
+    if (showDatePicker) {
+        val dateRangePickerState = rememberDateRangePickerState()
+        
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedStartDate = dateRangePickerState.selectedStartDateMillis
+                        selectedEndDate = dateRangePickerState.selectedEndDateMillis
+                        showDatePicker = false
+                    },
+                    enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DateRangePicker(
+                state = dateRangePickerState,
+                title = { Text("Select Date Range", modifier = Modifier.padding(16.dp)) },
+                showModeToggle = false,
+                modifier = Modifier.fillMaxWidth().height(500.dp)
+            )
+        }
     }
 }
 

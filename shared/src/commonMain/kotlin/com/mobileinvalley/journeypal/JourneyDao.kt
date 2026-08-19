@@ -28,6 +28,9 @@ interface JourneyDao {
     @Query("SELECT * FROM journey_items WHERE notes LIKE '%' || :query || '%' ORDER BY timestamp DESC")
     fun searchItems(query: String): Flow<List<JourneyItem>>
 
-    @Query("SELECT * FROM journey_items WHERE timestamp BETWEEN :startTimestamp AND :endTimestamp ORDER BY timestamp DESC")
-    fun getItemsInDateRange(startTimestamp: kotlinx.datetime.Instant, endTimestamp: kotlinx.datetime.Instant): Flow<List<JourneyItem>>
+    @Query("SELECT * FROM journey_items WHERE timestamp >= :startDate AND timestamp <= :endDate ORDER BY timestamp DESC")
+    fun getItemsByDateRange(startDate: kotlinx.datetime.Instant, endDate: kotlinx.datetime.Instant): Flow<List<JourneyItem>>
+
+    @Query("SELECT * FROM journey_items WHERE (notes LIKE '%' || :query || '%') AND (timestamp BETWEEN :startTimestamp AND :endTimestamp) ORDER BY timestamp DESC")
+    fun searchAndFilter(query: String, startTimestamp: kotlinx.datetime.Instant, endTimestamp: kotlinx.datetime.Instant): Flow<List<JourneyItem>>
 }
