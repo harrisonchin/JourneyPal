@@ -6,12 +6,16 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface JourneyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItem(item: JourneyItem)
+
+    @Upsert
+    suspend fun upsertItems(items: List<JourneyItem>)
 
     @Update
     suspend fun updateItem(item: JourneyItem)

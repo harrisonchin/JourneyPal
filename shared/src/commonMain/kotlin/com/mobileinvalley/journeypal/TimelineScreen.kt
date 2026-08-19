@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.days
@@ -41,6 +42,8 @@ fun TimelineScreen(
     var selectedEndDate by remember { mutableStateOf<Long?>(null) }
     var fullscreenPhotoUri by remember { mutableStateOf<String?>(null) }
     val shareLauncher = rememberPlatformShareLauncher()
+    val filePicker = rememberPlatformFilePicker()
+    val snackbarHostState = remember { SnackbarHostState() }
     
     val journeyItems by if (dao != null) {
         remember(searchQuery, selectedStartDate, selectedEndDate) {
@@ -81,20 +84,55 @@ fun TimelineScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Surface(shadowElevation = 4.dp) {
                 Column {
                     CenterAlignedTopAppBar(
                         title = { Text("JourneyPal Timeline") },
                         actions = {
-                            IconButton(onClick = {
-                                scope.launch {
-                                    val allItems = dao?.getAllItems()?.first() ?: emptyList()
-                                    val jsonString = json.encodeToString(allItems)
-                                    shareLauncher.shareTextFile("journeypal_backup.json", jsonString)
+                            var showMenu by remember { mutableStateOf(false) }
+                            Box {
+                                IconButton(onClick = { showMenu = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
                                 }
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = "Export Backup")
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Export Backup (JSON)") },
+                                        onClick = {
+                                            showMenu = false
+                                            scope.launch {
+                                                val allItems = dao?.getAllItems()?.first() ?: emptyList()
+                                                val jsonString = json.encodeToString(allItems)
+                                                shareLauncher.shareTextFile("journeypal_backup.json", jsonString)
+                                            }
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Import Backup (JSON)") },
+                                        onClick = {
+                                            showMenu = false
+                                            filePicker.pickJsonFile { content ->
+                                                if (content != null) {
+                                                    scope.launch {
+                                                        try {
+                                                            val importedItems = json.decodeFromString<List<JourneyItem>>(content)
+                                                            dao?.upsertItems(importedItems)
+                                                            snackbarHostState.showSnackbar("Successfully restored ${importedItems.size} entries!")
+                                                        } catch (e: Exception) {
+                                                            snackbarHostState.showSnackbar("Failed to parse backup file.")
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.UploadFile, contentDescription = null) }
+                                    )
+                                }
                             }
                         }
                     )
