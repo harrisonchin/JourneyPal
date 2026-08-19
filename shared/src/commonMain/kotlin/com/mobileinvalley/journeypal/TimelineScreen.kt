@@ -18,11 +18,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.days
+
+private val json = Json { prettyPrint = true }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +40,7 @@ fun TimelineScreen(
     var selectedStartDate by remember { mutableStateOf<Long?>(null) }
     var selectedEndDate by remember { mutableStateOf<Long?>(null) }
     var fullscreenPhotoUri by remember { mutableStateOf<String?>(null) }
+    val shareLauncher = rememberPlatformShareLauncher()
     
     val journeyItems by if (dao != null) {
         remember(searchQuery, selectedStartDate, selectedEndDate) {
@@ -79,7 +85,18 @@ fun TimelineScreen(
             Surface(shadowElevation = 4.dp) {
                 Column {
                     CenterAlignedTopAppBar(
-                        title = { Text("JourneyPal Timeline") }
+                        title = { Text("JourneyPal Timeline") },
+                        actions = {
+                            IconButton(onClick = {
+                                scope.launch {
+                                    val allItems = dao?.getAllItems()?.first() ?: emptyList()
+                                    val jsonString = json.encodeToString(allItems)
+                                    shareLauncher.shareTextFile("journeypal_backup.json", jsonString)
+                                }
+                            }) {
+                                Icon(Icons.Default.Share, contentDescription = "Export Backup")
+                            }
+                        }
                     )
                     OutlinedTextField(
                         value = searchQuery,
