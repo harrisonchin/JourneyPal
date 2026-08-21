@@ -14,8 +14,7 @@ actual class PlatformShareLauncher {
         val fileURL = cacheDirectory?.URLByAppendingPathComponent(fileName)
         
         if (fileURL != null) {
-            val nsString = content as NSString
-            nsString.writeToURL(fileURL, true, NSUTF8StringEncoding, null)
+            (content as platform.Foundation.NSString).writeToURL(fileURL, true, NSUTF8StringEncoding, null)
             
             val activityController = UIActivityViewController(listOf(fileURL), null)
             
