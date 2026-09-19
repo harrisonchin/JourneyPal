@@ -5,6 +5,10 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We need your location to tag your journey entries.</string>
+	<string>JourneyPal needs your location to tag your journey photos on the map.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>JourneyPal accesses your photos to display them on your activity timeline.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>JourneyPal uses the camera to capture photos for your timeline.</string>
 </dict>
 </plist>
