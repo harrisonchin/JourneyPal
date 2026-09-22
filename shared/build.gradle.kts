@@ -27,7 +27,7 @@ kotlin {
     }
     
     androidLibrary {
-       namespace = "com.mobileinvalley.journeypal.shared"
+       namespace = "com.mobileinvalley.journeypal.pro.shared"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     

@@ -22,15 +22,15 @@ dependencies {
 }
 
 android {
-    namespace = "com.mobileinvalley.journeypal"
+    namespace = "com.mobileinvalley.journeypal.pro"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.mobileinvalley.journeypal"
+        applicationId = "com.mobileinvalley.journeypal.pro"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 6
+        versionName = "1.0.3"
     }
     packaging {
         resources {
