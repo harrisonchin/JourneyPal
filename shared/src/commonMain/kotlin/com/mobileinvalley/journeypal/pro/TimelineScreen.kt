@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -74,11 +75,11 @@ fun TimelineScreen(
     }
     
     val scope = rememberCoroutineScope()
-    var showAddDialog by remember { mutableStateOf(false) }
-    var newNote by remember { mutableStateOf("") }
-    var latText by remember { mutableStateOf("") }
-    var lonText by remember { mutableStateOf("") }
-    var photoUris by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    var newNote by rememberSaveable { mutableStateOf("") }
+    var latText by rememberSaveable { mutableStateOf("") }
+    var lonText by rememberSaveable { mutableStateOf("") }
+    var photoUris by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
 
     val imagePicker = rememberImagePickerLauncher { uris ->
         photoUris = uris

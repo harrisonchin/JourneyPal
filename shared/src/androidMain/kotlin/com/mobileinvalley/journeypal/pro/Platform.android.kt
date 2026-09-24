@@ -3,6 +3,7 @@ package com.mobileinvalley.journeypal.pro
 import android.net.Uri
 import android.os.Build
 import kotlinx.datetime.Instant
+import java.io.File
 
 class AndroidPlatform : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
@@ -17,16 +18,25 @@ actual fun resolveUri(uri: String?): Any? {
     return try {
         if (uri.startsWith("app-storage://")) {
             val fileName = uri.substringAfter("app-storage://")
-            val file = java.io.File(appContext.filesDir, fileName)
-            Uri.fromFile(file)
+            if (isAppContextInitialized()) {
+                val file = File(appContext.filesDir, fileName)
+                if (file.exists()) {
+                    Uri.fromFile(file)
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
         } else if (uri.startsWith("content://") || uri.startsWith("file://")) {
             Uri.parse(uri)
         } else if (uri.startsWith("/")) {
-            Uri.fromFile(java.io.File(uri))
+            val file = File(uri)
+            if (file.exists()) Uri.fromFile(file) else null
         } else {
             uri
         }
     } catch (e: Exception) {
-        uri
+        null
     }
 }
