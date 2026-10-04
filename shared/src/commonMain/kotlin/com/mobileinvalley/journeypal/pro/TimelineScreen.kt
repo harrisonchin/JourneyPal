@@ -6,17 +6,25 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.first
@@ -27,9 +35,25 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.days
 
 private val json = Json { prettyPrint = true }
+
+fun formatFormattedTimestamp(instant: Instant): String {
+    val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    val monthName = localDateTime.month.name.lowercase().take(3).replaceFirstChar { it.uppercase() }
+    val hour = localDateTime.hour
+    val minute = localDateTime.minute.toString().padStart(2, '0')
+    val isPm = hour >= 12
+    val displayHour = when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+    }
+    val amPm = if (isPm) "PM" else "AM"
+    return "$monthName ${localDateTime.dayOfMonth}, ${localDateTime.year} • $displayHour:$minute $amPm"
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +112,7 @@ fun TimelineScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Surface(shadowElevation = 4.dp) {
+            Surface(shadowElevation = 0.dp) {
                 Column {
                     CenterAlignedTopAppBar(
                         title = { Text("JourneyPal Pro Timeline") },
@@ -152,49 +176,55 @@ fun TimelineScreen(
                             }
                         }
                     )
+
+                    val dateFilterActive = selectedStartDate != null || selectedEndDate != null
+
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
                         placeholder = { Text("Search your journey...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(0.dp)
+                            ) {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                                    }
+                                }
+                                IconButton(onClick = { showDatePicker = true }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.DateRange,
+                                        contentDescription = "Filter by Date",
+                                        tint = if (dateFilterActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         },
                         singleLine = true,
-                        shape = MaterialTheme.shapes.medium
+                        shape = RoundedCornerShape(24.dp)
                     )
-                    
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Date Range Chip
-                        val dateFilterActive = selectedStartDate != null || selectedEndDate != null
-                        FilterChip(
-                            selected = dateFilterActive,
-                            onClick = { showDatePicker = true },
-                            label = {
-                                if (dateFilterActive) {
-                                    val startStr = selectedStartDate?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString() } ?: "..."
-                                    val endStr = selectedEndDate?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString() } ?: "..."
-                                    Text("$startStr - $endStr")
-                                } else {
-                                    Text("Filter by Date")
-                                }
-                            },
-                            leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
-                            trailingIcon = if (dateFilterActive) {
-                                {
+
+                    if (dateFilterActive) {
+                        val startStr = selectedStartDate?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString() } ?: "..."
+                        val endStr = selectedEndDate?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(TimeZone.currentSystemDefault()).date.toString() } ?: "..."
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilterChip(
+                                selected = true,
+                                onClick = { showDatePicker = true },
+                                label = { Text("$startStr - $endStr") },
+                                leadingIcon = { Icon(Icons.Outlined.DateRange, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                trailingIcon = {
                                     IconButton(
                                         onClick = {
                                             selectedStartDate = null
@@ -203,23 +233,6 @@ fun TimelineScreen(
                                         modifier = Modifier.size(18.dp)
                                     ) {
                                         Icon(Icons.Default.Close, contentDescription = "Clear date filter")
-                                    }
-                                }
-                            } else null
-                        )
-
-                        // Search Query Chip (if not empty)
-                        if (searchQuery.isNotEmpty()) {
-                            FilterChip(
-                                selected = true,
-                                onClick = { /* Search bar already handles editing */ },
-                                label = { Text("Search: $searchQuery") },
-                                trailingIcon = {
-                                    IconButton(
-                                        onClick = { searchQuery = "" },
-                                        modifier = Modifier.size(18.dp)
-                                    ) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear search")
                                     }
                                 }
                             )
@@ -252,8 +265,8 @@ fun TimelineScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 items(journeyItems, key = { it.id }) { item ->
                     JourneyItemRow(
@@ -358,7 +371,7 @@ fun TimelineScreen(
                             val savedPhotoUris = photoUris.toList()
 
                             val newItem = JourneyItem(
-                                id = "${currentNow.toEpochMilliseconds()}_${kotlin.random.Random.nextInt(1000)}",
+                                id = "${currentNow.toEpochMilliseconds()}_${Random.nextInt(1000)}",
                                 photoUris = savedPhotoUris,
                                 timestamp = currentNow,
                                 latitude = finalLat,
@@ -446,13 +459,17 @@ fun JourneyItemRow(
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = MaterialTheme.shapes.large
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 if (item.photoUris.isNotEmpty()) {
                     val firstUri = item.photoUris.first()
@@ -460,49 +477,91 @@ fun JourneyItemRow(
                         model = resolveUri(firstUri),
                         contentDescription = "Journey Photo",
                         modifier = Modifier
-                            .size(80.dp)
-                            .background(Color.LightGray)
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onPhotoClick(firstUri) },
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
-                            .background(Color.LightGray)
-                    )
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Image,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = item.timestamp.toString(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
                         text = item.notes,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                        style = TextStyle(
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Lat: ${item.latitude}, Lon: ${item.longitude}",
-                        style = MaterialTheme.typography.bodySmall
+                        text = formatFormattedTimestamp(item.timestamp),
+                        style = TextStyle(
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        maxLines = 1
                     )
+                    if (item.latitude != 0.0 || item.longitude != 0.0) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.LocationOn,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "Location attached",
+                                    style = TextStyle(
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
             }
             
             if (item.photoUris.size > 1) {
                 Spacer(modifier = Modifier.height(8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(item.photoUris.drop(1)) { uri ->
                         AsyncImage(
                             model = resolveUri(uri),
                             contentDescription = "Journey Photo",
                             modifier = Modifier
-                                .size(60.dp)
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp))
                                 .clickable { onPhotoClick(uri) },
                             contentScale = ContentScale.Crop
                         )
